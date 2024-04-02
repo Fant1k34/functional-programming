@@ -5,7 +5,7 @@ getLineHelper :: [Char] -> IO [Char]
 getLineHelper container = getChar >>= \r -> return (container ++ [r])
 
 -- Implement reading line from standard input. 
--- Use getChar to read a single character. 
+-- Use getChar to read a single character.
 myGetLine' :: [Char] -> IO String
 myGetLine' state = do
     array <- getLineHelper state
@@ -13,6 +13,7 @@ myGetLine' state = do
         then return array
     else getLineHelper array >>= myGetLine'
 
+myGetLine = myGetLine' []
 
 -- Ask the user for their name.
 -- Print "Hello, NAME" to the standard output, where NAME is the name of the user.
@@ -20,14 +21,12 @@ myGetLine' state = do
 helloUser :: IO ()
 helloUser = do
     putStrLn "What is your name?"
-    name <- myGetLine' []
+    name <- myGetLine
     putStrLn ("Hello, " ++ name)
 
 
 -- Use interact in helloUser.
 helloUser' :: IO ()
 helloUser' = do
-    putStrLn "Я не до конца понял, что должна делать эта функция"
-    putStrLn "Но вот сейчас я взаимодействую вместе с helloUser"
-    putStrLn "Сейчас я поприветсвую по имени"
-    helloUser
+    putStrLn "What is your name?"
+    interact (\name -> "Hello, " ++ name)
