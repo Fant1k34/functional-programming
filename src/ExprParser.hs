@@ -11,9 +11,10 @@ import Data.Char (isAlpha, isAlphaNum, isNumber)
 import Control.Applicative (Alternative((<|>), empty))
 
 import Data (Operator1 (..), Operator2 (..), Expr (..), Error (..))
+import Data.Foldable1 (foldlM1)
 
 
-castCharToInt :: Integral a => Char -> [a]
+castCharToInt :: Num a => Char -> [a]
 castCharToInt char
     | char == '0' = [0]
     | char == '1' = [1]
@@ -62,19 +63,58 @@ isFullyApplied :: Parser Bool
 isFullyApplied = Parser (\input -> if (length input == 0) then Right (input, True) else Left ("Parse Error: String is not fully parsed -- " ++ input))
 
 
-parseNumber :: Integral a => Parser (Expr a)
-parseNumber = do
+parseNumberToExpr :: Integral a => Parser (Expr a)
+parseNumberToExpr = do
     numberList <- many (satisfy isNumber castCharToInt) (++)
     let result = Prelude.foldl1 concatNumbers numberList
 
     return (Arg result)
 
+-- Заготовка для парсинга abc.de чисел. Но пока не сходятся типы Integral и Fractional -> Num
+-- (do
+--     part1List <- many (satisfy isNumber castCharToInt) (++)
+--     let part1 = Prelude.foldl1 concatNumbers part1List
 
--- parseIndet :: Parser [Char]
--- parseIndet = do
---     letter <- satisfy isAlpha (: [])
---     other <- some (satisfy isAlphaNum (: [])) (++)
---     return (letter ++ other)
+--     satisfy (=='.') (\x -> x)
+
+--     part2List <- many (satisfy isNumber castCharToInt) (++)
+--     let part2 = Prelude.foldl1 concatNumbers part2List
+
+--     let result = part1 + part2 / (10 ^ (razryad part2))
+--     return (Arg result)
+-- )
+
+
+parseIndet :: Parser [Char]
+parseIndet = do
+    letter <- satisfy isAlpha (: [])
+    other <- some (satisfy isAlphaNum (: [])) (++)
+    return (letter ++ other)
+
+
+parseIndentToExpr :: Parser (Expr Int)
+parseIndentToExpr = do
+    var <- parseIndet
+
+    return (Var var)
+
+
+
+keywordParser :: String -> Parser String
+keywordParser word = if (length word == 0) then return "" else foldl1 (\p1 p2 -> p1 >>= (\successP1 -> Parser (\input -> 
+    case (getParserFunc p2 input) of 
+        Left comment -> Left comment
+        Right (suff, value) -> Right (suff, successP1 ++ value)))) (map (\char -> (satisfy (==char) (: []))) word)
+
+
+
+-- wordParser :: String -> Parser String
+-- wordParser word = do
+    -- parsed_word <- some (satisfy isAlpha (: [])) (++)
+
+
+-- unaryOperator :: Parser (Expr Int)
+-- unaryOperator = 
 
 
 
