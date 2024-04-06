@@ -5,6 +5,7 @@
 {-# HLINT ignore "Use const" #-}
 {-# HLINT ignore "Use <$>" #-}
 {-# OPTIONS_GHC -Wno-unused-do-bind #-}
+{-# HLINT ignore "Alternative law, right identity" #-}
 module ExprParser where
 
 import Parser (Parser(..))
@@ -36,6 +37,7 @@ defineActionByZnak znak
     | znak == '+' = Plus
     | znak == '*' = Mul
     | znak == '/' = Div
+    | znak == '^' = In
     | otherwise = error "Inner Error: Something was broken during parsing. defineActionByZnak got not action"
 
 
@@ -70,6 +72,14 @@ isFullyApplied :: Parser Bool
 isFullyApplied = Parser (\input -> if (length input == 0) then Right (input, True) else Left ("Parse Error: String is not fully parsed -- " ++ input))
 
 
+parseNumber :: Parser Integer
+parseNumber = do
+    numberList <- some (satisfy isNumber castCharToInt) (++)
+    let result = Prelude.foldl1 concatNumbers numberList
+
+    return result
+
+
 parseNumberToExpr :: Integral a => Parser (Expr a)
 parseNumberToExpr = do
     numberList <- some (satisfy isNumber castCharToInt) (++)
@@ -95,7 +105,7 @@ parseNumberToExpr = do
 parseIndet :: Parser [Char]
 parseIndet = do
     letter <- satisfy isAlpha (: [])
-    other <- some (satisfy isAlphaNum (: [])) (++)
+    other <- ExprParser.any (satisfy isAlphaNum (: [])) (++) ""
     return (letter ++ other)
 
 
@@ -123,7 +133,7 @@ possibleSeparatorParser :: Parser String
 possibleSeparatorParser = ExprParser.any separatorParser (++) ""
 
 znakParser :: Parser Operator2
-znakParser = satisfy (\char -> elem char ['+', '-', '/', '*']) defineActionByZnak
+znakParser = satisfy (\char -> elem char ['+', '-', '/', '*', '^']) defineActionByZnak
 
 
 unaryParser :: Parser Operator1
@@ -164,3 +174,24 @@ fullExpressionParser = do
     isFullyApplied
 
     return result
+
+
+variableEnterParser :: Parser [(String, Integer)]
+variableEnterParser = do
+    possibleSeparatorParser
+    var <- parseIndet
+    possibleSeparatorParser
+    satisfy (== '=') id
+    possibleSeparatorParser
+    value <- parseNumber
+    possibleSeparatorParser
+
+    return [(var, value)]
+
+
+variablesListParser :: Parser [(String, Integer)]
+variablesListParser = Parser (\input -> case getParserFunc variableEnterParser input of 
+    Left comment -> Left comment
+    Right (suff, value) -> case getParserFunc variablesListParser suff of
+        Left _ -> Right (suff, value)
+        Right (suff', new_value) -> Right (suff', value ++ new_value)) <|> empty

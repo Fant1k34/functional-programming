@@ -15,6 +15,7 @@ defineOperationEvaluator op
 
 
 -- eval :: Num a => Expr a -> [(String, a)] -> Either (Error a) a
+eval :: (Ord a, Floating a) => Expr a -> [(String, a)] -> Either (Error a) a
 eval (Arg value) list = Right value
 
 eval (Var variable) list = let search_result = Data.Map.lookup variable (fromList list)
