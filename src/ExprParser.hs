@@ -7,7 +7,7 @@
 module ExprParser where
 
 import Parser (Parser(..))
-import Data.Char (isAlpha, isAlphaNum, isNumber)
+import Data.Char (isAlpha, isAlphaNum, isNumber, isSeparator)
 import Control.Applicative (Alternative((<|>), empty))
 
 import Data (Operator1 (..), Operator2 (..), Expr (..), Error (..))
@@ -29,6 +29,15 @@ castCharToInt char
     | otherwise = error "Inner Error: Something was broken"
 
 
+defineActionByZnak :: Char -> Operator2
+defineActionByZnak znak
+    | znak == '-' = Min
+    | znak == '+' = Plus
+    | znak == '*' = Mul
+    | znak == '/' = Div
+    | otherwise = error "Inner Error: Something was broken during parsing. defineActionByZnak got not action"
+
+
 razryad :: Integral a => a -> Int -> Int
 razryad value a = if value < 10 then 1 else razryad (div value 10) (a) + 1
 
@@ -46,17 +55,14 @@ satisfy cond castFunction = Parser (\input ->
 
 
 some :: Parser a -> (a -> a -> a) -> Parser a
-some p_1 concat_results = (p_1 >>= (\success_result_p_1 ->
-    Parser ( \input -> case getParserFunc (some p_1 concat_results) input of
-        Left comment -> Right (input, success_result_p_1)
-        Right (suff', value) -> Right (suff', concat_results success_result_p_1 value) ) ) ) <|> empty
+some p1 concatResults = (p1 >>= (\successResultP1 ->
+    Parser ( \input -> case getParserFunc (some p1 concatResults) input of
+        Left comment -> Right (input, successResultP1)
+        Right (suff', value) -> Right (suff', concatResults successResultP1 value) ) ) ) <|> empty
 
 
-many :: Parser a -> (a -> a -> a) -> Parser a
-many p_1 concat_results = do
-    r <- p_1
-    s <- some p_1 concat_results
-    return (concat_results r s)
+any :: Parser a -> (a -> a -> a) -> a -> Parser a
+any p1 concatResults baseCase = some p1 concatResults <|> return baseCase
 
 
 isFullyApplied :: Parser Bool
@@ -65,7 +71,7 @@ isFullyApplied = Parser (\input -> if (length input == 0) then Right (input, Tru
 
 parseNumberToExpr :: Integral a => Parser (Expr a)
 parseNumberToExpr = do
-    numberList <- many (satisfy isNumber castCharToInt) (++)
+    numberList <- some (satisfy isNumber castCharToInt) (++)
     let result = Prelude.foldl1 concatNumbers numberList
 
     return (Arg result)
@@ -100,34 +106,41 @@ parseIndentToExpr = do
 
 
 
-keywordParser :: String -> Parser String
-keywordParser word = if (length word == 0) then return "" else foldl1 (\p1 p2 -> p1 >>= (\successP1 -> Parser (\input -> 
+wordParser :: String -> Parser String
+wordParser word = if (length word == 0) then return "" else foldl1 (\p1 p2 -> p1 >>= (\successP1 -> Parser (\input -> 
     case (getParserFunc p2 input) of 
         Left comment -> Left comment
         Right (suff, value) -> Right (suff, successP1 ++ value)))) (map (\char -> (satisfy (==char) (: []))) word)
 
 
-
--- wordParser :: String -> Parser String
--- wordParser word = do
-    -- parsed_word <- some (satisfy isAlpha (: [])) (++)
+separatorParser :: Parser String
+separatorParser = some (satisfy isSeparator (: [])) (++)
 
 
--- unaryOperator :: Parser (Expr Int)
--- unaryOperator = 
+znakParser :: Parser Operator2
+znakParser = satisfy (\char -> elem char ['+', '-', '/', '*']) defineActionByZnak
 
 
+unaryOperator :: Parser (Expr Int)
+unaryOperator = do
+    wordParser "sqrt"
+    separatorParser
+    expressionParser
 
 
--- parseIndet :: Parser String
--- parseIndet = do
---         h <- satisfy isAlpha
---         t <- orParser input
---         h : t
-        -- where 
-        --     orParser = Parser (\input -> do
-        --         h <- getParserFunc ((satisfy isAlpha) <|> (satisfy isNumber)) input
-        --         t <- getParserFunc orParser input
-        --         )
-        --         <|> return []
+binaryOperator :: Parser (Expr Int)
+binaryOperator = do
+    znak <- znakParser
+    separatorParser
+    value1 <- expressionParser
+    separatorParser
+    value2 <- expressionParser
+
+    return (CE value1 znak value2)
+
+
+expressionParser :: Parser (Expr Int)
+expressionParser = binaryOperator <|> unaryOperator <|> parseIndentToExpr <|> parseNumberToExpr
+
+
 
