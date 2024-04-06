@@ -3,7 +3,6 @@
 {-# HLINT ignore "Eta reduce" #-}
 {-# HLINT ignore "Evaluate" #-}
 {-# HLINT ignore "Use const" #-}
-{-# HLINT ignore "Use camelCase" #-}
 {-# HLINT ignore "Use <$>" #-}
 {-# OPTIONS_GHC -Wno-unused-do-bind #-}
 module ExprParser where
@@ -100,7 +99,8 @@ parseIndet = do
     return (letter ++ other)
 
 
-parseIndentToExpr :: Parser (Expr Int)
+
+parseIndentToExpr :: Parser (Expr Integer)
 parseIndentToExpr = do
     var <- parseIndet
 
@@ -119,6 +119,9 @@ separatorParser :: Parser String
 separatorParser = some (satisfy isSeparator (: [])) (++)
 
 
+possibleSeparatorParser :: Parser String
+possibleSeparatorParser = ExprParser.any separatorParser (++) ""
+
 znakParser :: Parser Operator2
 znakParser = satisfy (\char -> elem char ['+', '-', '/', '*']) defineActionByZnak
 
@@ -129,7 +132,7 @@ unaryParser = do
 
     return Sqrt
 
-unaryOperator :: Parser (Expr Int)
+unaryOperator :: Parser (Expr Integer)
 unaryOperator = do
     operation <- unaryParser
     separatorParser
@@ -138,7 +141,7 @@ unaryOperator = do
     return (Marg operation value)
 
 
-binaryOperator :: Parser (Expr Int)
+binaryOperator :: Parser (Expr Integer)
 binaryOperator = do
     znak <- znakParser
     separatorParser
@@ -149,8 +152,15 @@ binaryOperator = do
     return (CE value1 znak value2)
 
 
-expressionParser :: Parser (Expr Int)
+expressionParser :: Parser (Expr Integer)
 expressionParser = binaryOperator <|> unaryOperator <|> parseIndentToExpr <|> parseNumberToExpr
 
 
+fullExpressionParser :: Parser (Expr Integer)
+fullExpressionParser = do
+    possibleSeparatorParser
+    result <- expressionParser
+    possibleSeparatorParser
+    isFullyApplied
 
+    return result

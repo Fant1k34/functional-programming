@@ -1,3 +1,4 @@
+{-# LANGUAGE InstanceSigs #-}
 module Data where
 
 -- Type for unary operator
@@ -70,3 +71,11 @@ instance Eq a => Eq (Error a) where
   IncorrectDegreeOfValue value1 == IncorrectDegreeOfValue value2 = value1 == value2
   VariableDoesNotExist var1 == VariableDoesNotExist var2 = var1 == var2
   _ == _ = False
+
+
+instance Functor Expr where
+  fmap :: (a -> b) -> Expr a -> Expr b
+  fmap f (Arg value) = Arg (f value)
+  fmap f (Var var) = Var var
+  fmap f (Marg operator expr) = Marg operator (fmap f expr)
+  fmap f (CE expr1 operator expr2) = CE (fmap f expr1) operator (fmap f expr2)
