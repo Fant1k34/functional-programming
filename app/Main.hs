@@ -13,7 +13,7 @@ main :: IO ()
 -- main = print (getParserFunc parseNumberToExpr "12345.6789" >>= \(_, result) -> Right (Marg Neg result))
 -- main = print (getParserFunc (wordParser "abcde") $ "abcdeabcde")
 -- main = print (getParserFunc expressionParser $ "+ 5 7")
-main = print (case (getParserFunc expressionParser $ "* 2 + 1 3") of 
+main = print (case (getParserFunc expressionParser $ "* 2 sqrt + 1 3") of 
     Left comment -> comment
     Right (suff, value) -> show value)
 

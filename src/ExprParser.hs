@@ -4,6 +4,8 @@
 {-# HLINT ignore "Evaluate" #-}
 {-# HLINT ignore "Use const" #-}
 {-# HLINT ignore "Use camelCase" #-}
+{-# HLINT ignore "Use <$>" #-}
+{-# OPTIONS_GHC -Wno-unused-do-bind #-}
 module ExprParser where
 
 import Parser (Parser(..))
@@ -121,11 +123,19 @@ znakParser :: Parser Operator2
 znakParser = satisfy (\char -> elem char ['+', '-', '/', '*']) defineActionByZnak
 
 
+unaryParser :: Parser Operator1
+unaryParser = do
+    wordParser "sqrt"
+
+    return Sqrt
+
 unaryOperator :: Parser (Expr Int)
 unaryOperator = do
-    wordParser "sqrt"
+    operation <- unaryParser
     separatorParser
-    expressionParser
+    value <- expressionParser
+
+    return (Marg operation value)
 
 
 binaryOperator :: Parser (Expr Int)
