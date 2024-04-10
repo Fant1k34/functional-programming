@@ -73,12 +73,24 @@ simplifyGroups = testGroup "Simplify" [ simplifyGroup ]
         testCase "x / 1 = x" $ simplify (CE (Var "x") Div (Arg 1)) @?= Var "x"
       ]
 
-parseGroups = testGroup "Parse" [ simplifyGroup ]
+parseGroups = testGroup "Parse" [ parseGroup, parseWithVars ]
   where
-    simplifyGroup = testGroup "Numbers only"
+    parseGroup = testGroup "Numbers only"
       [
-        testCase "+ 2 4" $ evaluateExpr "+ 2 4" @?= "Right 6.0",
-        testCase "* sqrt 16 sqrt sqrt 16" $ evaluateExpr "* sqrt 16 sqrt sqrt 16" @?= "Right 8.0",
+        testCase "+ 2 4" $ evaluateExpr "+ 2 4" [] @?= "Right 6.0",
+        testCase "* sqrt 16 sqrt sqrt 16" $ evaluateExpr "* sqrt 16 sqrt sqrt 16" [] @?= "Right 8.0",
+        testCase "- 2 4" $ evaluateExpr "- 2 4" [] @?= "Right (-2.0)",
+        testCase "/ 4 2" $ evaluateExpr "/ 4 2" [] @?= "Right 2.0",
+        testCase "/ 2 4" $ evaluateExpr "/ 2 4" [] @?= "Right 0.5",
+        testCase "^ 2 4" $ evaluateExpr "^ 2 4" [] @?= "Right 16.0",
+        testCase "* - / 5 2 1 + ^ 2 3 4" $ evaluateExpr "* - / 5 2 1 + ^ 2 3 4" [] @?= "Right 18.0"
+      ]
+    parseWithVars = testGroup "With variables"
+      [
+        testCase "+ x 4" $ evaluateExpr "+ x 4" [("x", 2)] @?= "Right 6.0",
+        testCase "* sqrt var1 sqrt sqrt var2" $ evaluateExpr "* sqrt var1 sqrt sqrt var2" [("var1", 4), ("var2", 16)] @?= "Right 4.0",
+        testCase "* - x1 1 + ^ x2 x3 x4" $ evaluateExpr "* - x1 2 + ^ x2 x3 x4" [("x1", 1), ("x2", 2), ("x3", 3), ("x4", 4)] @?= "Right (-12.0)",
+        testCase "* - x1 1 + ^ x2 x3 x4" $ evaluateExpr "* - x1 2 + ^ x2 x3 x4" [("x1", 1), ("x2", 2), ("x3", 3)] @?= "Left VariableDoesNotExist: variable x4 is not defined"
       ]
 
 
