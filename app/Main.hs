@@ -1,30 +1,12 @@
 module Main where
 
-import ExprParser (satisfy, some, any, parseNumberToExpr, parseIndentToExpr, wordParser, expressionParser, znakParser, expressionParser, fullExpressionParser, variablesListParser, variableEnterParser)
 import Data.Char (isAlpha, isNumber)
 import Parser (Parser(getParserFunc))
-import Lib (eval, simplify)
+import Lib (eval, simplify, evaluateExpr, simplifyExpr, getListOfVar)
 
 import Data (Operator1 (..), Operator2 (..), Expr (..), Error (..))
 
 import Data.Either (Either(Right))
-
-
-getListOfVar :: (Show a, Floating a) => String -> [(String, a)]
-getListOfVar line = case getParserFunc variablesListParser line of
-    Left comment -> error ("Error: " ++ comment)
-    Right (_, varList) -> map (\(varName, value) -> (varName, fromInteger value)) varList
-
-
-evaluate :: (Ord a, Show a, Floating a) => String -> [(String, a)] -> String
-evaluate exprLine varList = case getParserFunc fullExpressionParser exprLine of
-    Left comment -> comment
-    Right (suff, expression) -> show (eval (fromInteger <$> expression) varList)
-
-
-simplifyExpr exprLine = case getParserFunc fullExpressionParser exprLine of
-    Left comment -> comment
-    Right (suff, expression) -> show (simplify (fromInteger <$> expression))
 
 
 main :: IO ()
@@ -56,7 +38,7 @@ main = do
 
         varLine <- getLine
 
-        let result = evaluate exprLine (getListOfVar varLine)
+        let result = evaluateExpr exprLine (getListOfVar varLine)
 
         putStrLn result
         ) else print (simplifyExpr exprLine)

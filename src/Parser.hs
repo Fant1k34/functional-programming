@@ -53,8 +53,3 @@ instance Alternative Parser where
         Right (suff, result) -> Right (suff, result)
         Left _ -> getParserFunc r input
         )
-
-
--- instance Semigroup Int where
---   (<>) :: Int -> Int -> Int
---   (<>) a b = a * 10 + b

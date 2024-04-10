@@ -1,10 +1,13 @@
 {-# OPTIONS_GHC -Wno-incomplete-patterns #-}
-module Lib (eval, simplify) where
+module Lib (eval, simplify, evaluateExpr, simplifyExpr, getListOfVar) where
 
 import Data (Operator1 (..), Operator2 (..), Expr (..), Error (..))
 import Data.Map (lookup, fromList)
 
---defineOperationEvaluator :: Num a => Operator2 -> (a -> a -> a)
+import Parser (Parser(..))
+import ParserVariableInput (variablesListParser)
+import ParserExpr (fullExpressionParser)
+
 defineOperationEvaluator :: Floating a => Operator2 -> a -> a -> a
 defineOperationEvaluator op
   | op == Div = (/)
@@ -14,7 +17,6 @@ defineOperationEvaluator op
   | op == In = (**)
 
 
--- eval :: Num a => Expr a -> [(String, a)] -> Either (Error a) a
 eval :: (Ord a, Floating a) => Expr a -> [(String, a)] -> Either (Error a) a
 eval (Arg value) list = Right value
 
@@ -85,3 +87,21 @@ simplify (Var variable) = rule (Var variable)
 simplify (Marg anyOperator1 expr) = rule (Marg anyOperator1 (simplify expr))
 
 simplify (CE expr1 op expr2) = rule (CE (simplify expr1) op (simplify expr2))
+
+
+getListOfVar :: (Show a, Floating a) => String -> [(String, a)]
+getListOfVar line = case getParserFunc variablesListParser line of
+    Left comment -> error ("Error: " ++ comment)
+    Right (_, varList) -> map (\(varName, value) -> (varName, fromInteger value)) varList
+
+
+evaluateExpr :: (Ord a, Show a, Floating a) => String -> [(String, a)] -> String
+evaluateExpr exprLine varList = case getParserFunc fullExpressionParser exprLine of
+    Left comment -> comment
+    Right (suff, expression) -> show (eval (fromInteger <$> expression) varList)
+
+
+simplifyExpr :: String -> String
+simplifyExpr exprLine = case getParserFunc fullExpressionParser exprLine of
+    Left comment -> comment
+    Right (suff, expression) -> show (simplify (fromInteger <$> expression))
