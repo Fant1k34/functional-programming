@@ -23,6 +23,7 @@ dependencies:
 - base >= 4.7 && < 4.9
 - containers == 0.6.7
 - tasty >= 1.5
+- mtl == 2.3.1
 
 ghc-options:
 - -Wall
@@ -49,6 +50,7 @@ executables:
     dependencies:
     - Expression
     - easy-logger
+    - mtl
 
 tests:
   Expression-test:

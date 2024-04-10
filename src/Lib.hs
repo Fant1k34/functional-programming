@@ -8,6 +8,10 @@ import Parser (Parser(..))
 import ParserVariableInput (variablesListParser)
 import ParserExpr (fullExpressionParser)
 
+import Control.Monad (Monad(return))
+import Control.Monad.State
+import Data.Either (Either)
+
 defineOperationEvaluator :: Floating a => Operator2 -> a -> a -> a
 defineOperationEvaluator op
   | op == Div = (/)
@@ -17,33 +21,55 @@ defineOperationEvaluator op
   | op == In = (**)
 
 
-eval :: (Ord a, Floating a) => Expr a -> [(String, a)] -> Either (Error a) a
-eval (Arg value) list = Right value
+eval :: (Show a, Ord a, Floating a) => Expr a -> State [(String, a)] (Either (Error a) a)
 
-eval (Var variable) list = let search_result = Data.Map.lookup variable (fromList list)
-                           in  case (search_result) of
+eval (Arg value) = return (Right value)
+
+eval (Var variable) = do
+  env <- get
+  return (case (Data.Map.lookup variable (Data.Map.fromList env)) of
                              Just x -> Right x
-                             Nothing -> Left (VariableDoesNotExist variable)
+                             Nothing -> Left (VariableDoesNotExist variable))
 
-eval (Marg Neg expr) list = case (eval expr list) of
-  Right result -> Right (-result)
-  Left exception -> Left exception
+eval (Marg Neg expr) = do
+  env <- get
+  result <- eval expr
 
-eval (Marg Sqrt expr) list = case (eval expr list) of
-  Right result -> if (result >= 0) then Right (result**0.5)
-   else Left (OutOfPossibleValuesError Sqrt result)
-  Left exception -> Left exception
+  return (case result of
+    Left comment -> Left comment
+    Right value -> Right (-value)
+    )
 
-eval (CE expr1 op expr2) list = case (eval expr1 list) of
-  Right result1 -> case (eval expr2 list) of
-    Right result2 -> case (op) of
-      Div -> if (result2 /= 0) then Right (defineOperationEvaluator op result1 result2)
-       else Left (ZeroDivisionError result1)
-      In -> if (result1 == 0 && result2 < 0) then Left (IncorrectDegreeOfValue result2)
-       else Right (defineOperationEvaluator op result1 result2)
-      _ -> Right (defineOperationEvaluator op result1 result2)
-    Left exception -> Left exception
-  Left exception -> Left exception
+
+eval (Marg Sqrt expr) = do
+  env <- get
+  result <- eval expr
+
+  return (case result of
+    Left comment -> Left comment
+    Right value -> if value >= 0 then Right (sqrt value) else Left (OutOfPossibleValuesError Sqrt value)
+    )
+
+
+eval (CE expr1 op expr2) = do
+  env <- get
+  result1 <- eval expr1
+  result2 <- eval expr2
+
+  return (case result1 of
+    Right value1 -> case result2 of
+      Right value2 -> case op of
+        Div -> if value2 /= 0 then Right (defineOperationEvaluator op value1 value2)
+        else Left (ZeroDivisionError value1)
+        In -> if value1 == 0 && value2 < 0 then Left (IncorrectDegreeOfValue value2)
+        else Right (defineOperationEvaluator op value1 value2)
+        _ -> Right (defineOperationEvaluator op value1 value2)
+      Left exception -> Left exception
+    Left exception -> Left exception)
+
+
+evaluate :: (Show a, Ord a, Floating a) => Expr a -> [(String, a)] -> Either (Error a) a
+evaluate expr list = fst (runState (eval expr) list)
 
 
 rule :: Eq a => Num a => Expr a -> Expr a
@@ -95,10 +121,11 @@ getListOfVar line = case getParserFunc variablesListParser line of
     Right (_, varList) -> map (\(varName, value) -> (varName, fromInteger value)) varList
 
 
+
 evaluateExpr :: (Ord a, Show a, Floating a) => String -> [(String, a)] -> String
 evaluateExpr exprLine varList = case getParserFunc fullExpressionParser exprLine of
     Left comment -> comment
-    Right (suff, expression) -> show (eval (fromInteger <$> expression) varList)
+    Right (suff, expression) -> show (evaluate (fromInteger <$> expression) varList)
 
 
 simplifyExpr :: String -> String
