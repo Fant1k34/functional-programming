@@ -73,6 +73,14 @@ simplifyGroups = testGroup "Simplify" [ simplifyGroup ]
         testCase "x / 1 = x" $ simplify (CE (Var "x") Div (Arg 1)) @?= Var "x"
       ]
 
+parseGroups = testGroup "Parse" [ simplifyGroup ]
+  where
+    simplifyGroup = testGroup "Numbers only"
+      [
+        testCase "+ 2 4" $ evaluateExpr "+ 2 4" @?= "Right 6.0",
+        testCase "* sqrt 16 sqrt sqrt 16" $ evaluateExpr "* sqrt 16 sqrt sqrt 16" @?= "Right 8.0",
+      ]
+
 
 main :: IO ()
-main = defaultMain $ testGroup "Tests" [ evalGroups, simplifyGroups ]
+main = defaultMain $ testGroup "Tests" [ evalGroups, simplifyGroups, parseGroups ]
