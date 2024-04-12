@@ -42,8 +42,10 @@ library
   build-depends:
       base >=4.7 && <4.9
     , containers ==0.6.7
+    , hedgehog ==1.4
     , mtl ==2.3.1
     , tasty >=1.5
+    , tasty-hedgehog
   default-language: Haskell2010
 
 executable Expression-exe
@@ -60,14 +62,17 @@ executable Expression-exe
     , base >=4.7 && <4.9
     , containers ==0.6.7
     , easy-logger
+    , hedgehog ==1.4
     , mtl
     , tasty >=1.5
+    , tasty-hedgehog
   default-language: Haskell2010
 
 test-suite Expression-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
+      Property
       Paths_Expression
   autogen-modules:
       Paths_Expression
@@ -82,5 +87,6 @@ test-suite Expression-test
     , mtl ==2.3.1
     , optparse-applicative >=0.14 && <0.18
     , tasty
+    , tasty-hedgehog
     , tasty-hunit
   default-language: Haskell2010

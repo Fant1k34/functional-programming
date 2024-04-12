@@ -1,6 +1,10 @@
 module Utils where
 
 
+slice :: Int -> Int -> [a] -> [a]
+slice from to xs = take (to - from + 1) (drop from xs)
+
+
 castCharToInt :: Num a => Char -> [a]
 castCharToInt char
     | char == '0' = [0]

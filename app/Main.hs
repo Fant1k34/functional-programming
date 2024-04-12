@@ -2,7 +2,7 @@ module Main where
 
 import Data.Char (isAlpha, isNumber)
 import Parser (Parser(getParserFunc))
-import Lib (eval, simplify, evaluateExpr, simplifyExpr, getListOfVar)
+import Lib (evaluateExpr, simplifyExpr, getListOfVar)
 
 import Data (Operator1 (..), Operator2 (..), Expr (..), Error (..))
 
@@ -42,3 +42,19 @@ main = do
 
         putStrLn result
         ) else print (simplifyExpr exprLine)
+
+generateExprLeaf :: Num a => Int -> Expr a
+generateExprLeaf randomValue
+  | randomValue == 0 = Arg 5
+  | otherwise = Var "x"
+
+
+generateExprMarg :: Num a => Int -> Expr a
+generateExprMarg randomValue = Marg Sqrt (generateExprLeaf randomValue)
+
+
+generateExprSample :: Num a => Int -> Expr a
+generateExprSample limit
+  | limit <= 0 = generateExprLeaf 0
+  | limit == 1 = generateExprMarg 1
+  | otherwise = generateExprLeaf 0

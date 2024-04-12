@@ -1,11 +1,13 @@
 {-# LANGUAGE InstanceSigs #-}
 module Data where
 
+import Utils
+
 -- Type for unary operator
 data Operator1 = Sqrt | Neg deriving (Eq)
 
 instance Show Operator1 where
-  show Sqrt = "√"
+  show Sqrt = "sqrt"
   show Neg = "-"
 
 
@@ -24,11 +26,11 @@ instance Show Operator2 where
 data Expr a = Arg a | Var String | Marg Operator1 (Expr a) | CE (Expr a) Operator2 (Expr a)
 
 instance Show a => Show (Expr a) where
-  show (Arg value) = show value
-  show (Var variable) = show variable
+  show (Arg value) = if (show value !! 0) == '-' then "(" ++ (show value) ++ ")" else show value
+  show (Var variable) = slice 1 (length (show variable) - 2) (show variable)
   show (Marg op value)
     | op == Neg = "(" ++ (show op) ++ (show value) ++ ")"
-    | op == Sqrt = (show op) ++ "(" ++ (show value) ++ ")"
+    | op == Sqrt = show op ++ "(" ++ (show value) ++ ")"
   show (CE expr1 op expr2) = (show expr1) ++ (show op) ++ (show expr2)
 
 instance Eq a => Eq (Expr a) where

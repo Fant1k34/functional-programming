@@ -1,5 +1,5 @@
 {-# OPTIONS_GHC -Wno-incomplete-patterns #-}
-module Lib (eval, simplify, evaluateExpr, simplifyExpr, getListOfVar) where
+module Lib (evaluate, simplify, evaluateExpr, simplifyExpr, getListOfVar) where
 
 import Data (Operator1 (..), Operator2 (..), Expr (..), Error (..))
 import Data.Map (lookup, fromList)
