@@ -19,6 +19,13 @@ import Control.Applicative (Alternative((<|>), empty))
 import Data (Operator1 (..), Operator2 (..), Expr (..), Error (..))
 import Data.Foldable1 (foldlM1)
 
+import Basement.Floating
+import GHC.Integer (Integer)
+import GHC.Real (Integral)
+
+takenNames :: [String]
+takenNames = ["sqrt", "let", "Nikita"]
+
 
 defineActionByZnak :: Char -> Operator2
 defineActionByZnak znak
@@ -32,36 +39,37 @@ defineActionByZnak znak
 
 parseNumberToExpr :: Integral a => Parser (Expr a)
 parseNumberToExpr = do
-    numberList <- some (satisfy isNumber castCharToInt) (++)
+    numberList <- some (castCharToInt <$> (satisfy isNumber))
     let result = Prelude.foldl1 concatNumbers numberList
 
     return (Arg result)
 
--- Заготовка для парсинга abc.de чисел. Но пока не сходятся типы Integral и Fractional -> Num
--- (do
---     part1List <- many (satisfy isNumber castCharToInt) (++)
---     let part1 = Prelude.foldl1 concatNumbers part1List
 
---     satisfy (=='.') (\x -> x)
+parseFracToExpr :: Floating a => Parser (Expr a)
+parseFracToExpr = do
+    part1List <- some (castCharToInt <$> satisfy isNumber)
+    let part1 = fromInteger (Prelude.foldl1 concatNumbers part1List)
 
---     part2List <- many (satisfy isNumber castCharToInt) (++)
---     let part2 = Prelude.foldl1 concatNumbers part2List
+    satisfy (=='.')
 
---     let result = part1 + part2 / (10 ^ (razryad part2))
---     return (Arg result)
--- )
+    part2List <- some (castCharToInt <$> satisfy isNumber)
+    let part2 = fromInteger (Prelude.foldl1 concatNumbers part2List)
+
+    let result = part1 + part2 / (10 ^ (length part2List))
+    return (Arg result)
 
 
-parseIndentToExpr :: Parser (Expr Integer)
+parseIndentToExpr :: Num a => Parser (Expr a)
 parseIndentToExpr = do
     var <- parseIndet
 
-    return (Var var)
+    if (foldl1 (||) (map (\word -> word == var) takenNames)) then
+        Parser (\_ -> Left $ "Parse Error: Variable name " ++ var ++ " is already reserved") else return (Var var)
 
 
 
 znakParser :: Parser Operator2
-znakParser = satisfy (\char -> elem char ['+', '-', '/', '*', '^']) defineActionByZnak
+znakParser = defineActionByZnak <$> (satisfy (\char -> elem char ['+', '-', '/', '*', '^']))
 
 
 unaryParser :: Parser Operator1
@@ -70,7 +78,8 @@ unaryParser = do
 
     return Sqrt
 
-unaryOperator :: Parser (Expr Integer)
+
+unaryOperator :: Integral a => Parser (Expr a)
 unaryOperator = do
     operation <- unaryParser
     separatorParser
@@ -79,7 +88,7 @@ unaryOperator = do
     return (Marg operation value)
 
 
-binaryOperator :: Parser (Expr Integer)
+binaryOperator :: Integral a => Parser (Expr a)
 binaryOperator = do
     znak <- znakParser
     separatorParser
@@ -90,11 +99,11 @@ binaryOperator = do
     return (CE value1 znak value2)
 
 
-expressionParser :: Parser (Expr Integer)
+expressionParser :: Integral a => Parser (Expr a)
 expressionParser = binaryOperator <|> unaryOperator <|> parseIndentToExpr <|> parseNumberToExpr
 
 
-fullExpressionParser :: Parser (Expr Integer)
+fullExpressionParser :: Integral a => Parser (Expr a)
 fullExpressionParser = do
     possibleSeparatorParser
     result <- expressionParser

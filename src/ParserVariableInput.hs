@@ -10,7 +10,7 @@ variableEnterParser = do
     possibleSeparatorParser
     var <- parseIndet
     possibleSeparatorParser
-    satisfy (== '=') id
+    satisfy (== '=')
     possibleSeparatorParser
     value <- parseNumber
     possibleSeparatorParser

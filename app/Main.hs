@@ -2,7 +2,7 @@ module Main where
 
 import Data.Char (isAlpha, isNumber)
 import Parser (Parser(getParserFunc))
-import Lib (eval, simplify, evaluateExpr, simplifyExpr, getListOfVar)
+import Lib (simplify, evaluateExpr, simplifyExpr, getListOfVar)
 
 import Data (Operator1 (..), Operator2 (..), Expr (..), Error (..))
 

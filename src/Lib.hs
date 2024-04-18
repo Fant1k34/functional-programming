@@ -1,5 +1,5 @@
 {-# OPTIONS_GHC -Wno-incomplete-patterns #-}
-module Lib (eval, simplify, evaluateExpr, simplifyExpr, getListOfVar) where
+module Lib (evaluate, simplify, evaluateExpr, simplifyExpr, getListOfVar) where
 
 import Data (Operator1 (..), Operator2 (..), Expr (..), Error (..))
 import Data.Map (lookup, fromList)
@@ -35,10 +35,7 @@ eval (Marg Neg expr) = do
   env <- get
   result <- eval expr
 
-  return (case result of
-    Left comment -> Left comment
-    Right value -> Right (-value)
-    )
+  return (((-1)*) <$> result)
 
 
 eval (Marg Sqrt expr) = do
