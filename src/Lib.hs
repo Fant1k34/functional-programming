@@ -2,7 +2,7 @@
 module Lib (evaluate, simplify, evaluateExpr, simplifyExpr, getListOfVar) where
 
 import Data (Operator1 (..), Operator2 (..), Expr (..), Error (..))
-import Data.Map (lookup, fromList)
+import Data.List (lookup)
 
 import Parser (Parser(..))
 import ParserVariableInput (variablesListParser)
@@ -27,9 +27,9 @@ eval (Arg value) = return (Right value)
 
 eval (Var variable) = do
   env <- get
-  return (case (Data.Map.lookup variable (Data.Map.fromList env)) of
-                             Just x -> Right x
-                             Nothing -> Left (VariableDoesNotExist variable))
+  return (case (Data.List.lookup variable env) of
+    Just x -> Right x
+    Nothing -> Left (VariableDoesNotExist variable))
 
 eval (Marg Neg expr) = do
   env <- get
