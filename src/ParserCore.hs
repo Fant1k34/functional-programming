@@ -1,4 +1,4 @@
-module ParserCore (satisfy, some, ParserCore.any, isFullyApplied, parseNumber, parseIndet, wordParser, separatorParser, possibleSeparatorParser, parserWithSeparator) where
+module ParserCore (satisfy, some, ParserCore.any, isFullyApplied, parseNumber, parseIndet, wordParser, separatorParser, possibleSeparatorParser, parserWithSeparator, parseInBrackets) where
 
 
 import Parser (Parser(..))
@@ -88,3 +88,12 @@ parserWithSeparator p sep = (do
 
     return [value]
     )
+
+
+parseInBrackets:: Parser a -> String -> String -> Parser a
+parseInBrackets p lb rb = do
+    wordParser lb
+    result <- p
+    wordParser rb
+
+    return result

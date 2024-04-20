@@ -7,6 +7,7 @@ import Control.Applicative (Alternative((<|>), empty))
 import Data.Char (isAlpha, isAlphaNum, isNumber, isSeparator)
 import Data
 
+
 parseVar :: Parser T
 parseVar = do
     varName <- some (satisfy isAlpha)
@@ -29,13 +30,31 @@ parseAbstraction = do
     return (Abstr varList term)
 
 
-parseApplication :: Parser T
-parseApplication = do
-    possibleSeparatorParser
-    terms <- parserWithSeparator parseTerm " "
+-- parseApplication :: Parser T
+-- parseApplication = do
+--     possibleSeparatorParser
+--     terms <- parserWithSeparator parseTerm " "
+
+--     return (App terms)
+
+parseSkobBlock :: Parser T
+parseSkobBlock = parseInBrackets parseTerm "(" ")"
+
+
+-- Парсер это последовательность из:
+-- - Абстракций
+-- - Переменных
+-- - Скобочных блоков, в которых находится терм
+parseTerm :: Parser T
+parseTerm = do
+    terms <- parserWithSeparator (parseAbstraction <|> parseSkobBlock <|> parseVar) " "
 
     return (App terms)
 
 
-parseTerm :: Parser T
-parseTerm = parseAbstraction <|> parseApplication <|> parseVar <|> empty
+parseFullTerm :: Parser T
+parseFullTerm = do
+    result <- parseTerm
+    isFullyApplied
+
+    return result
