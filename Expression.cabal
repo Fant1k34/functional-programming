@@ -29,8 +29,7 @@ library
       Lib
       Parser
       ParserCore
-      ParserExpr
-      ParserVariableInput
+      ParserTerm
       Utils
   other-modules:
       Paths_Expression
