@@ -21,7 +21,7 @@ instance Show Operator2 where
 
 
 -- Type for expression
-data Expr a = Arg a | Var String | Marg Operator1 (Expr a) | CE (Expr a) Operator2 (Expr a)
+data Expr a = Arg a | Var String | Marg Operator1 (Expr a) | CE (Expr a) Operator2 (Expr a) | Let String (Expr a) (Expr a)
 
 instance Show a => Show (Expr a) where
   show (Arg value) = show value
@@ -30,6 +30,8 @@ instance Show a => Show (Expr a) where
     | op == Neg = "(" ++ (show op) ++ (show value) ++ ")"
     | op == Sqrt = (show op) ++ "(" ++ (show value) ++ ")"
   show (CE expr1 op expr2) = (show expr1) ++ (show op) ++ (show expr2)
+  show (Let var expr1 expr2) = "let " ++ var ++ " " ++ (show expr1) ++ " " ++ (show expr2)
+
 
 instance Eq a => Eq (Expr a) where
   Arg value1 == Arg value2 = value1 == value2
@@ -79,3 +81,4 @@ instance Functor Expr where
   fmap f (Var var) = Var var
   fmap f (Marg operator expr) = Marg operator (fmap f expr)
   fmap f (CE expr1 operator expr2) = CE (fmap f expr1) operator (fmap f expr2)
+  fmap f (Let value expr1 expr2) = Let value (fmap f expr1) (fmap f expr2)

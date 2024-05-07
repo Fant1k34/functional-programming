@@ -1,4 +1,7 @@
 {-# OPTIONS_GHC -Wno-incomplete-patterns #-}
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+{-# HLINT ignore "Evaluate" #-}
+{-# OPTIONS_GHC -Wno-unused-do-bind #-}
 module Lib (evaluate, simplify, evaluateExpr, simplifyExpr, getListOfVar) where
 
 import Data (Operator1 (..), Operator2 (..), Expr (..), Error (..))
@@ -63,6 +66,19 @@ eval (CE expr1 op expr2) = do
         _ -> Right (defineOperationEvaluator op value1 value2)
       Left exception -> Left exception
     Left exception -> Left exception)
+
+
+eval (Let var expr1 expr2) = do
+  env <- get
+  letBinding <- eval expr1
+
+  case letBinding of
+    Left comment -> return $ Left comment
+    Right value -> (do 
+        put (env ++ [(var, value)])
+        eval expr2
+        )
+
 
 
 evaluate :: (Show a, Ord a, Floating a) => Expr a -> [(String, a)] -> Either (Error a) a
