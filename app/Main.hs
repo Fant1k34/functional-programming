@@ -2,7 +2,7 @@ module Main where
 
 import Data.Char (isAlpha, isNumber)
 import Parser (Parser(getParserFunc))
-import Lib (simplify, evaluateExpr, simplifyExpr, getListOfVar)
+import Lib (evaluateExpr, getListOfVar)
 
 import Data (Operator1 (..), Operator2 (..), Expr (..), Error (..))
 
@@ -41,4 +41,4 @@ main = do
         let result = evaluateExpr exprLine (getListOfVar varLine)
 
         putStrLn result
-        ) else print (simplifyExpr exprLine)
+        ) else print exprLine

@@ -21,7 +21,16 @@ instance Show Operator2 where
 
 
 -- Type for expression
-data Expr a = Arg a | Var String | Marg Operator1 (Expr a) | CE (Expr a) Operator2 (Expr a) | Let String (Expr a) (Expr a)
+data Expr a = Arg a | Var String | Marg Operator1 (Expr a) | CE (Expr a) Operator2 (Expr a)
+
+-- Type for Code Structure
+data CodeStr a = Let String (CodeStr a) (CodeStr a) | Expression (Expr a) deriving(Eq)
+
+
+instance Show a => Show (CodeStr a) where
+  show (Let var subExpr expr) = "let " ++ var ++ " = " ++ (show subExpr) ++ " in " ++ (show expr)
+  show (Expression expr) = show expr
+
 
 instance Show a => Show (Expr a) where
   show (Arg value) = show value
@@ -30,7 +39,6 @@ instance Show a => Show (Expr a) where
     | op == Neg = "(" ++ (show op) ++ (show value) ++ ")"
     | op == Sqrt = (show op) ++ "(" ++ (show value) ++ ")"
   show (CE expr1 op expr2) = (show expr1) ++ (show op) ++ (show expr2)
-  show (Let var expr1 expr2) = "let " ++ var ++ " " ++ (show expr1) ++ " " ++ (show expr2)
 
 
 instance Eq a => Eq (Expr a) where
@@ -55,6 +63,7 @@ data Error a =
   | IncorrectDegreeOfValue a
   | VariableDoesNotExist String
 
+
 instance Show a => Show (Error a) where
   show (OutOfPossibleValuesError op value) = "OutOfPossibleValuesError: operator "
    ++ (show op) ++ " can not handle expression " ++ (show value)
@@ -64,6 +73,7 @@ instance Show a => Show (Error a) where
    ++ (show value) ++ " degree does not exist"
   show (VariableDoesNotExist variable) = "VariableDoesNotExist: variable "
    ++ variable ++ " is not defined"
+
 
 instance Eq a => Eq (Error a) where
   OutOfPossibleValuesError op1 value1 == OutOfPossibleValuesError op2 value2 =
@@ -81,4 +91,10 @@ instance Functor Expr where
   fmap f (Var var) = Var var
   fmap f (Marg operator expr) = Marg operator (fmap f expr)
   fmap f (CE expr1 operator expr2) = CE (fmap f expr1) operator (fmap f expr2)
-  fmap f (Let value expr1 expr2) = Let value (fmap f expr1) (fmap f expr2)
+
+
+instance Functor CodeStr where
+  fmap :: (a -> b) -> CodeStr a -> CodeStr b
+  fmap f (Let var subExpr expr) = Let var (fmap f subExpr) (fmap f expr)
+  fmap f (Expression expr) = Expression (fmap f expr)
+
