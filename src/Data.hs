@@ -2,7 +2,7 @@
 {-# OPTIONS_GHC -Wno-redundant-constraints #-}
 module Data where
 
-data (Integral a) => IntegerWithBase a = Number a a
+data (Integral a) => IntegerWithBase a = Number a a deriving (Eq)
 
 
 countNumberFromBase :: (Integral a) => a -> [a] -> [a]
@@ -21,7 +21,9 @@ evaluate base value stepen = value * base ^ stepen
 
 
 toDecimal :: (Integral a) => IntegerWithBase a -> a
-toDecimal (Number value base) = sum $ zipWith (evaluate base) (countNumberFromBase value []) (reverse [0..(razryad value - 1)])
+toDecimal (Number value base) = case value of
+  0 -> 0
+  _ -> sum $ zipWith (evaluate base) (countNumberFromBase value []) (reverse [0..(razryad value - 1)])
 
 
 
@@ -30,7 +32,9 @@ fromDecimal' value base list = if value == 0 then list else fromDecimal' (div va
 
 
 fromDecimal :: (Integral a) => a -> a -> IntegerWithBase a
-fromDecimal value baseTo = Number (foldl1 (\prev curr -> prev * 10 + curr) (fromDecimal' value baseTo [])) baseTo
+fromDecimal value baseTo = case value of
+  0 -> Number 0 baseTo
+  _ -> Number (foldl1 (\prev curr -> prev * 10 + curr) (fromDecimal' value baseTo [])) baseTo
 
 
 instance (Show a, Integral a) => Show (IntegerWithBase a) where
@@ -56,3 +60,8 @@ instance (Show a, Integral a) => Num (IntegerWithBase a) where
 
   fromInteger :: (Show a, Integral a) => Integer -> IntegerWithBase a
   fromInteger _ = error "Unsupported operation"
+
+
+instance (Show a, Integral a) => Ord (IntegerWithBase a) where
+  (<=) :: (Show a, Integral a) => IntegerWithBase a -> IntegerWithBase a -> Bool
+  (<=) (Number xValue xBase) (Number yValue yBase) = if xBase /= yBase then error "Unsupported operation" else toDecimal (Number xValue xBase) <= toDecimal (Number yValue yBase)
