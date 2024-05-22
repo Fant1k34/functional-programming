@@ -26,12 +26,6 @@ source-repository head
 library
   exposed-modules:
       Data
-      Lib
-      Parser
-      ParserCore
-      ParserExpr
-      ParserVariableInput
-      Utils
   other-modules:
       Paths_Expression
   autogen-modules:
