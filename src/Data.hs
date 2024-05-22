@@ -56,3 +56,9 @@ instance (Show a, Integral a) => Num (IntegerWithBase a) where
 
   fromInteger :: (Show a, Integral a) => Integer -> IntegerWithBase a
   fromInteger _ = error "Unsupported operation"
+
+
+instance (Show a, Integral a, Ord a) => Ord (IntegerWithBase a) where
+  (<=) :: (Show a, Integral a) => IntegerWithBase a -> IntegerWithBase a -> Bool
+  (<=) (Number xValue xBase) (Number yValue yBase) = if xBase /= yBase then error "Unsupported operation" else (toDecimal (Number xValue xBase)) <= (toDecimal (Number yValue yBase))
+
