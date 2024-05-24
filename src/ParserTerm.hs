@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+{-# HLINT ignore "Use <$>" #-}
 module ParserTerm where
 
 import ParserCore
@@ -8,8 +10,9 @@ import Data.Char (isAlpha, isAlphaNum, isNumber, isSeparator)
 import Data
 
 
-parseVar :: Parser T
+parseVar :: Parser V
 parseVar = do
+    possibleSeparatorParser
     varName <- some (satisfy isAlpha)
 
     return (Var varName)
@@ -18,16 +21,16 @@ parseVar = do
 parseAbstraction :: Parser T
 parseAbstraction = do
     possibleSeparatorParser
-    satisfy (=='l')
+    satisfy (=='\\')
     possibleSeparatorParser
-    varList <- parserWithSeparator (some (satisfy isAlpha)) " "
+    var <- parseVar
     possibleSeparatorParser
 
     satisfy (=='.')
     possibleSeparatorParser
     term <- parseTerm
 
-    return (Abstr varList term)
+    return (Abstr var term)
 
 
 -- parseApplication :: Parser T
@@ -47,9 +50,9 @@ parseSkobBlock = parseInBrackets parseTerm "(" ")"
 -- - Скобочных блоков, в которых находится терм
 parseTerm :: Parser T
 parseTerm = do
-    terms <- parserWithSeparator (parseAbstraction <|> parseSkobBlock <|> parseVar) " "
+    terms <- parserWithSeparator (parseAbstraction <|> parseSkobBlock <|> VarToT <$> parseVar) (some (satisfy (\el -> el == ' ' || el == '\t')))
 
-    return (App terms)
+    return $ foldl1 App terms
 
 
 parseFullTerm :: Parser T

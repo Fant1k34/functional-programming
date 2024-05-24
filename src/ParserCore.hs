@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -Wno-unused-do-bind #-}
 module ParserCore (satisfy, some, ParserCore.any, isFullyApplied, parseNumber, parseIndet, wordParser, separatorParser, possibleSeparatorParser, parserWithSeparator, parseInBrackets) where
 
 
@@ -76,13 +77,13 @@ possibleSeparatorParser :: Parser String
 possibleSeparatorParser = separatorParser <|> return ""
 
 
-parserWithSeparator :: Parser a -> String -> Parser [a]
-parserWithSeparator p sep = (do
+parserWithSeparator :: Parser a -> Parser String -> Parser [a]
+parserWithSeparator p sepP = (do
     value <- p
-    wordParser sep
-    results <- parserWithSeparator p sep
+    sepP
+    results <- parserWithSeparator p sepP
 
-    return ([value] ++ results)
+    return (value : results)
     ) <|> (do
     value <- p
 
