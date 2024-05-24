@@ -55,7 +55,7 @@ eagerReduction (App (VarToT x) term2) = App (VarToT x) term2
 eagerReduction (App (Abstr arg body) term2) = do
     let reductedTerm = term2
 
-    substitute arg body reductedTerm
+    substitute arg reductedTerm body
 
 eagerReduction (App term1 term2) = do
     let reductedTerm1 = eagerReduction term1
@@ -65,7 +65,7 @@ eagerReduction (App term1 term2) = do
         Abstr arg body -> do
             let reductedTerm = term2
 
-            substitute arg body reductedTerm
+            substitute arg reductedTerm body
         _ -> App reductedTerm1 reductedTerm2
 
 
@@ -76,7 +76,7 @@ lazyReduction (Abstr arg body) = Abstr arg body
 
 lazyReduction (App (VarToT x) term2) = App (VarToT x) term2
 lazyReduction (App (Abstr arg body) term2) = do
-    let evaled = substitute arg body term2
+    let evaled = substitute arg term2 body
 
     lazyReduction evaled
 
@@ -85,7 +85,7 @@ lazyReduction (App term1 term2) = do
 
     case reductedTerm1 of
         Abstr arg body -> do
-            let evaled = substitute arg body term2
+            let evaled = substitute arg term2 body
 
             lazyReduction evaled
         _ -> App reductedTerm1 (lazyReduction term2)
