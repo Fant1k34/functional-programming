@@ -1,4 +1,7 @@
 {-# OPTIONS_GHC -Wno-incomplete-patterns #-}
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+{-# HLINT ignore "Redundant if" #-}
+{-# HLINT ignore "Use guards" #-}
 module Lib where
 
 import Data
@@ -42,3 +45,74 @@ prettyPrint term = case term of
             VarToT _ -> prettyPrint term1 ++ " " ++ prettyPrint term2
             Abstr _ _ -> prettyPrint term1 ++ " " ++ prettyPrint term2
             _ -> prettyPrint term1 ++ " (" ++ prettyPrint term2 ++ ")"
+
+
+eagerReduction :: T -> T
+eagerReduction (VarToT x) = VarToT x
+eagerReduction (Abstr arg body) = Abstr arg body
+
+eagerReduction (App (VarToT x) term2) = App (VarToT x) term2
+eagerReduction (App (Abstr arg body) term2) = do
+    let reductedTerm = term2
+
+    substitute arg body reductedTerm
+
+eagerReduction (App term1 term2) = do
+    let reductedTerm1 = eagerReduction term1
+    let reductedTerm2 = eagerReduction term2
+
+    case reductedTerm1 of
+        Abstr arg body -> do
+            let reductedTerm = term2
+
+            substitute arg body reductedTerm
+        _ -> App reductedTerm1 reductedTerm2
+
+
+
+lazyReduction :: T -> T
+lazyReduction (VarToT x) = VarToT x
+lazyReduction (Abstr arg body) = Abstr arg body
+
+lazyReduction (App (VarToT x) term2) = App (VarToT x) term2
+lazyReduction (App (Abstr arg body) term2) = do
+    let evaled = substitute arg body term2
+
+    lazyReduction evaled
+
+lazyReduction (App term1 term2) = do
+    let reductedTerm1 = lazyReduction term1
+
+    case reductedTerm1 of
+        Abstr arg body -> do
+            let evaled = substitute arg body term2
+
+            lazyReduction evaled
+        _ -> App reductedTerm1 (lazyReduction term2)
+
+
+isFreeVar :: V -> T -> Bool
+isFreeVar a (VarToT x) = a == x
+isFreeVar a (App t1 t2) = isFreeVar a t1 || isFreeVar a t2
+isFreeVar a (Abstr arg body) = if a == arg then False else isFreeVar a body
+
+
+substitute :: V -> T -> T -> T
+--  [x -> N] x = N
+--  [x -> N] y = y
+substitute arg body (VarToT var) = if arg == var then body else VarToT var
+
+--  [x -> N] (PQ) = ([x -> N] P) ([x -> N] Q)
+substitute arg body (App term1 term2) = App (substitute arg body term1) (substitute arg body term2)
+
+--  [x -> N] (λx P) = λx . P
+-- [x -> N] (λy . P) = λy . [x -> N] P, if y ∉ FV(N)
+-- [x -> N] (λy . P) = λz . [x -> N] ([y -> z] P), if y ∈ FV(N), z ∉ FV(N) ∪ FV(P)
+
+substitute x body (Abstr y body') = if x == y then Abstr y body' else
+    if not $ isFreeVar y body then substitute x body body' 
+        else let new = Var "new" 
+             in
+             Abstr new (substitute x body (substitute y (VarToT new) body'))
+
+

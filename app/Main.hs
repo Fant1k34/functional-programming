@@ -7,6 +7,6 @@ import Lib (prettyPrint)
 
 
 main :: IO ()
-main = case (getParserFunc parseFullTerm "(S (\\ x . M (N L)) \\ x . ((M)) (N L))") of
+main = case getParserFunc parseFullTerm "(\\x . \\y . x) (\\a . a a) (\\b . b b)" of
     Left comment -> putStrLn comment
     Right (leftover, result) -> putStrLn $ prettyPrint result
