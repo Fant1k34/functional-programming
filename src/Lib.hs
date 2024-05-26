@@ -16,6 +16,7 @@ import Data
     -- x           \x . T  -> без скобок
     -- x           (T T)   -> со скобками справа
     -- (\x . T)    y       -> со скобками слева
+    -- (\x . T)    (T T)   -> со скобками
 
     -- T1 T2       y       -> без скобок
     -- T1 (\x . T) y       -> скобки
@@ -36,7 +37,9 @@ prettyPrint term = case term of
             VarToT _ -> prettyPrint term1 ++ " " ++ prettyPrint term2
             Abstr _ _ -> prettyPrint term1 ++ " " ++ prettyPrint term2
             _ -> prettyPrint term1 ++ " (" ++ prettyPrint term2 ++ ")"
-        Abstr _ _ -> "(" ++ prettyPrint term1 ++ ") " ++ prettyPrint term2
+        Abstr _ _ -> case term2 of
+            App _ _ -> "(" ++ prettyPrint term1 ++ ") (" ++ prettyPrint term2 ++ ")"
+            _ -> "(" ++ prettyPrint term1 ++ ") " ++ prettyPrint term2
         App _ (Abstr _ _) -> case term2 of
             VarToT _ -> " (" ++ prettyPrint term1 ++ ") " ++ prettyPrint term2
             Abstr _ _ -> " (" ++ prettyPrint term1 ++ ") " ++ prettyPrint term2
@@ -47,54 +50,80 @@ prettyPrint term = case term of
             _ -> prettyPrint term1 ++ " (" ++ prettyPrint term2 ++ ")"
 
 
-eagerReduction :: T -> T
-eagerReduction (VarToT x) = VarToT x
-eagerReduction (Abstr arg body) = Abstr arg body
+eagerReduction :: T -> IO T
+eagerReduction (VarToT x) = do
+    return $ VarToT x
 
-eagerReduction (App (VarToT x) term2) = App (VarToT x) term2
+eagerReduction (Abstr arg body) = do
+    reducted <- eagerReduction body
+
+    return $ Abstr arg reducted
+
+eagerReduction (App (VarToT x) term2) = do
+    reducted <- eagerReduction term2
+
+    return $ App (VarToT x) reducted
+
+
 eagerReduction (App (Abstr arg body) term2) = do
-    let reductedTerm = term2
+    reductedTerm <- eagerReduction term2
 
-    substitute arg reductedTerm body
+    eagerReduction $ substitute arg reductedTerm body
 
 eagerReduction (App term1 term2) = do
-    let reductedTerm1 = eagerReduction term1
-    let reductedTerm2 = eagerReduction term2
+    reductedTerm1 <- eagerReduction term1
+    reductedTerm2 <- eagerReduction term2
 
     case reductedTerm1 of
         Abstr arg body -> do
-            let reductedTerm = term2
+            let reductedTerm = reductedTerm2
 
-            substitute arg reductedTerm body
-        _ -> App reductedTerm1 reductedTerm2
+            eagerReduction $ substitute arg reductedTerm body
+        _ -> return $ App reductedTerm1 reductedTerm2
 
 
+lazyReduction :: T -> IO T
+lazyReduction (VarToT x) = return $ VarToT x
+lazyReduction (Abstr arg body) = do
+    reducted <- lazyReduction body
 
-lazyReduction :: T -> T
-lazyReduction (VarToT x) = VarToT x
-lazyReduction (Abstr arg body) = Abstr arg body
+    return $ Abstr arg reducted
 
-lazyReduction (App (VarToT x) term2) = App (VarToT x) term2
+lazyReduction (App (VarToT x) term2) = do
+    reducted <- lazyReduction term2
+
+    return $ App (VarToT x) reducted
+
 lazyReduction (App (Abstr arg body) term2) = do
-    let evaled = substitute arg term2 body
+    let substituted = substitute arg term2 body
 
-    lazyReduction evaled
+    lazyReduction substituted
 
 lazyReduction (App term1 term2) = do
-    let reductedTerm1 = lazyReduction term1
+    reductedTerm1 <- lazyReduction term1
 
     case reductedTerm1 of
         Abstr arg body -> do
-            let evaled = substitute arg term2 body
+            let substituted = substitute arg term2 body
 
-            lazyReduction evaled
-        _ -> App reductedTerm1 (lazyReduction term2)
+            lazyReduction substituted
+        _ -> do
+            reducted <- lazyReduction term2
+
+            return $ App reductedTerm1 reducted
 
 
 isFreeVar :: V -> T -> Bool
 isFreeVar a (VarToT x) = a == x
 isFreeVar a (App t1 t2) = isFreeVar a t1 || isFreeVar a t2
 isFreeVar a (Abstr arg body) = if a == arg then False else isFreeVar a body
+
+
+isReductable :: T -> Bool
+isReductable (VarToT x) = False
+isReductable (Abstr arg body) = isReductable body
+isReductable (App (Abstr _ _) _) = True
+isReductable (App term1 term2) = isReductable term1 || isReductable term2
 
 
 substitute :: V -> T -> T -> T
@@ -110,9 +139,7 @@ substitute arg body (App term1 term2) = App (substitute arg body term1) (substit
 -- [x -> N] (λy . P) = λz . [x -> N] ([y -> z] P), if y ∈ FV(N), z ∉ FV(N) ∪ FV(P)
 
 substitute x body (Abstr y body') = if x == y then Abstr y body' else
-    if not $ isFreeVar y body then substitute x body body' 
-        else let new = Var "new" 
+    if not $ isFreeVar y body then Abstr y (substitute x body body')
+        else let new = Var "new"
              in
              Abstr new (substitute x body (substitute y (VarToT new) body'))
-
-
