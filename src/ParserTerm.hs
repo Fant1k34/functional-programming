@@ -33,13 +33,6 @@ parseAbstraction = do
     return (Abstr var term)
 
 
--- parseApplication :: Parser T
--- parseApplication = do
---     possibleSeparatorParser
---     terms <- parserWithSeparator parseTerm " "
-
---     return (App terms)
-
 parseSkobBlock :: Parser T
 parseSkobBlock = parseInBrackets parseTerm "(" ")"
 

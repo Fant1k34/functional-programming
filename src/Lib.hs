@@ -5,7 +5,9 @@
 module Lib where
 
 import Data
+import Data.Char
 
+import Control.Monad.Trans.State.Lazy (State, get, put)
 -- prettyPrint:
 -- переменная: x (или y) -> без скобок
 -- Абстракция: \x . T -> без скобок
@@ -50,7 +52,7 @@ prettyPrint term = case term of
             _ -> prettyPrint term1 ++ " (" ++ prettyPrint term2 ++ ")"
 
 
-eagerReduction :: T -> IO T
+eagerReduction :: T -> State Int T
 eagerReduction (VarToT x) = do
     return $ VarToT x
 
@@ -67,8 +69,9 @@ eagerReduction (App (VarToT x) term2) = do
 
 eagerReduction (App (Abstr arg body) term2) = do
     reductedTerm <- eagerReduction term2
+    substituted <- substitute arg reductedTerm body
 
-    eagerReduction $ substitute arg reductedTerm body
+    eagerReduction $ substituted
 
 eagerReduction (App term1 term2) = do
     reductedTerm1 <- eagerReduction term1
@@ -77,12 +80,13 @@ eagerReduction (App term1 term2) = do
     case reductedTerm1 of
         Abstr arg body -> do
             let reductedTerm = reductedTerm2
+            substituted <- substitute arg reductedTerm body
 
-            eagerReduction $ substitute arg reductedTerm body
+            eagerReduction $ substituted
         _ -> return $ App reductedTerm1 reductedTerm2
 
 
-lazyReduction :: T -> IO T
+lazyReduction :: T -> State Int T
 lazyReduction (VarToT x) = return $ VarToT x
 lazyReduction (Abstr arg body) = do
     reducted <- lazyReduction body
@@ -95,7 +99,7 @@ lazyReduction (App (VarToT x) term2) = do
     return $ App (VarToT x) reducted
 
 lazyReduction (App (Abstr arg body) term2) = do
-    let substituted = substitute arg term2 body
+    substituted <- substitute arg term2 body
 
     lazyReduction substituted
 
@@ -104,7 +108,7 @@ lazyReduction (App term1 term2) = do
 
     case reductedTerm1 of
         Abstr arg body -> do
-            let substituted = substitute arg term2 body
+            substituted <- substitute arg term2 body
 
             lazyReduction substituted
         _ -> do
@@ -119,6 +123,12 @@ isFreeVar a (App t1 t2) = isFreeVar a t1 || isFreeVar a t2
 isFreeVar a (Abstr arg body) = if a == arg then False else isFreeVar a body
 
 
+isBoundVar :: V -> T -> Bool
+isBoundVar a (VarToT x) = False
+isBoundVar a (App t1 t2) = isBoundVar a t1 || isBoundVar a t2
+isBoundVar a (Abstr arg body) = if a == arg then True else isBoundVar a body
+
+
 isReductable :: T -> Bool
 isReductable (VarToT x) = False
 isReductable (Abstr arg body) = isReductable body
@@ -126,20 +136,48 @@ isReductable (App (Abstr _ _) _) = True
 isReductable (App term1 term2) = isReductable term1 || isReductable term2
 
 
-substitute :: V -> T -> T -> T
+
+getSubstitutionVar :: T -> T -> State Int V
+getSubstitutionVar term1 term2 = do
+    ind <- get
+
+    let var = Var ((filter (\el -> let elVar = Var $ "x" ++ el
+                                                  in
+                                                  (not (isFreeVar elVar term1)) && (not (isBoundVar elVar term1))
+                                                  && (not (isFreeVar elVar term2)) && (not (isBoundVar elVar term2))) [[x1] ++ [x2] ++ [x3] ++ [x4] ++ [x5] | x1 <- ['a'..'z'], x2 <- ['a'..'z'], x3 <- ['a'..'z'], x4 <- ['a'..'z'], x5 <- ['a'..'z']]) !! ind)
+
+    put (ind + 1)
+
+    return var
+    
+
+
+substitute :: V -> T -> T -> State Int T
 --  [x -> N] x = N
 --  [x -> N] y = y
-substitute arg body (VarToT var) = if arg == var then body else VarToT var
+substitute arg body (VarToT var) = if arg == var then return $ body else return $ VarToT var
 
 --  [x -> N] (PQ) = ([x -> N] P) ([x -> N] Q)
-substitute arg body (App term1 term2) = App (substitute arg body term1) (substitute arg body term2)
+substitute arg body (App term1 term2) = do
+    substituted1 <- substitute arg body term1
+    substituted2 <- substitute arg body term2
+
+    return $ App substituted1 substituted2
 
 --  [x -> N] (λx P) = λx . P
 -- [x -> N] (λy . P) = λy . [x -> N] P, if y ∉ FV(N)
 -- [x -> N] (λy . P) = λz . [x -> N] ([y -> z] P), if y ∈ FV(N), z ∉ FV(N) ∪ FV(P)
-
-substitute x body (Abstr y body') = if x == y then Abstr y body' else
-    if not $ isFreeVar y body then Abstr y (substitute x body body')
-        else let new = Var "new"
-             in
-             Abstr new (substitute x body (substitute y (VarToT new) body'))
+substitute x body (Abstr y body') = do
+    if x == y then return $ Abstr y body' else
+        if not $ isFreeVar y body then (do
+            substituted <- substitute x body body'
+            
+            return $ Abstr y substituted
+            )
+            else (do
+                new <- getSubstitutionVar body body'
+                substitutedInner <- substitute y (VarToT new) body'
+                substitutedOuter <- substitute x body substitutedInner
+                
+                return $ Abstr new substitutedOuter
+                )
